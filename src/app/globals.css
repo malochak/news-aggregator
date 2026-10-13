@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f3efe6;
+  --paper-2: #eae4d7;
+  --ink: #1b1a17;
+  --ink-2: #3a3832;
+  --graphite: #6b675e;
+  --rule: #d6cebd;
+  --accent: #e4472b;
+  --done: #5e6b3a;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #16150f;
+    --paper-2: #1f1d17;
+    --ink: #ece6d8;
+    --ink-2: #cfc8b8;
+    --graphite: #9a9384;
+    --rule: #34312a;
+    --accent: #ff5a3c;
+    --done: #9aaa6a;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-graphite: var(--graphite);
+  --color-rule: var(--rule);
+  --color-accent: var(--accent);
+  --color-done: var(--done);
+  --font-serif: "Newsreader Variable", "Source Serif 4", Georgia, serif;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+@layer components {
+  /* Monospace small caps used for all metadata. */
+  .meta {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    line-height: 1.4;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--graphite);
+  }
+
+  .field {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--rule);
+    padding: 0.5rem 0;
+    font-size: 1rem;
+    color: var(--ink);
+    outline: none;
+    border-radius: 0;
+  }
+  .field:focus {
+    border-bottom-color: var(--ink);
+  }
+  select.field {
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--graphite) 50%),
+      linear-gradient(135deg, var(--graphite) 50%, transparent 50%);
+    background-position: calc(100% - 10px) 55%, calc(100% - 5px) 55%;
+    background-size: 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 1.5rem;
+  }
+  select.field option {
+    background: var(--paper);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1.5px solid var(--ink);
+    padding: 0.45rem 0.9rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+    transition: background-color 120ms, color 120ms;
+  }
+  .btn:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .btn-accent {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-accent:hover {
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+
+  .link {
+    text-decoration: underline;
+    text-decoration-color: var(--rule);
+    text-underline-offset: 3px;
+  }
+  .link:hover {
+    text-decoration-color: var(--accent);
+  }
+}
+
+/* Hand-drawn strike-through for completed items. */
+.strike {
+  position: relative;
+}
+.strike::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  top: 52%;
+  height: 0.5em;
+  transform: translateY(-50%) scaleX(0);
+  transform-origin: left;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10' preserveAspectRatio='none'%3E%3Cpath d='M1 6 C 20 3, 35 7, 55 4.5 S 85 5.5, 99 3.5' stroke='%235e6b3a' stroke-width='2.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")
+    center / 100% 100% no-repeat;
+  transition: transform 260ms ease-out;
+  pointer-events: none;
+}
+.strike[data-on="true"]::after {
+  transform: translateY(-50%) scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .strike::after {
+    transition: none;
+  }
+}
