@@ -1,106 +1,59 @@
-# Feedlist — spec v0 (do dyskusji)
+# Feedlist — product spec
 
-Robocza nazwa: **Feedlist**. Prywatny agregator treści, w którym każdy nowy materiał
-(artykuł, film, post, odcinek) ląduje jako **zadanie do odhaczenia** z krótkim
-streszczeniem w punktach.
+Feedlist is an open-source content aggregator in which every new article, video, post or episode
+becomes a **to-do** with a 3–5 bullet summary. You read the bullets, open the item if it's worth it,
+and tick it off.
 
-## 1. Jak to działa (model mentalny)
+## Decisions
 
-```
-Źródła (RSS, YouTube, Reddit, ...) ──► Fetcher (co 30 min) ──► Nowy item
-                                                               │
-                                     ekstrakcja treści / transkrypcji
-                                                               │
-                                       AI: 3–5 bullet pointów + czas czytania
-                                                               │
-                                                  Inbox jako lista zadań
-                                                               │
-                                   ☐ do zrobienia → ☑ przeczytane / obejrzane
-                                                   → ⤫ pominięte / ★ zachowane
-```
+| Question | Decision |
+|---|---|
+| Who is it for | Personal first, but multi-user: anyone can self-host it or get an account on a shared instance |
+| AI | Bring your own key per user (Claude, ChatGPT, Mistral, Grok, Gemini, any OpenAI-compatible endpoint incl. self-hosted). Optional instance-wide key via env |
+| What gets ticked off | The whole item. Bullets are only a summary |
+| X / Twitter | Manual links for now (share sheet, bookmarklet). Optional RSSHub. Revisit with xAI's API (Grok has access to X search) |
+| Sources vs topics | Both: follow sources/creators, or watch a phrase |
+| Devices | Phone and desktop: responsive PWA |
+| Summary language | English |
+| Notifications | Daily email digest |
+| Stack | Next.js 16, Postgres (Neon/Supabase/any), Drizzle, Better Auth, Vercel AI SDK, Tailwind 4 |
+| Hosting | Vercel (free) + external cron, or Docker on a VPS with the in-process scheduler |
 
-### Pojęcia
-- **Źródło** – jeden konkretny feed: kanał YT, blog, subreddit, konto, newsletter.
-- **Twórca** – grupuje kilka źródeł tej samej osoby (np. jej YT + blog + X).
-- **Kategoria** – temat (np. „AI”, „Finanse”, „Bieganie”). Źródło należy do 1+ kategorii.
-- **Temat (keyword watch)** – subskrypcja frazy zamiast źródła, np. „Claude Code”
-  → wyszukiwanie w Google News RSS / YouTube / Reddit / HN.
-- **Item = zadanie** – tytuł, źródło, typ, czas czytania/oglądania, bullet pointy,
-  link, status.
+## Model
 
-### Statusy zadania
-`nowe` → `przeczytane/obejrzane` | `pominięte` | `zachowane (★ na później / do bazy wiedzy)`.
-Nieruszone itemy starsze niż N dni (domyślnie 7) automatycznie trafiają do archiwum,
-żeby inbox nie rósł w nieskończoność.
+- **Feed**: one fetchable URL, shared by all subscribers (fetched once per cycle).
+- **Entry**: one post in a feed.
+- **Subscription**: a user following a feed, with an optional category and creator.
+- **Category**: a user's topic (name + ink colour). **Creator**: groups one person's feeds.
+- **Item**: the to-do: one entry (or saved link) for one user, with status
+  `inbox → done | skipped | archived`, a ★ flag, summary bullets and estimated minutes.
+- **Topic watch**: a phrase turned into search feeds (Google News, HN, Reddit).
 
-## 2. Źródła — co jest realne
+## Done in v0.1
 
-| Źródło | Jak pobieramy | Koszt / trudność |
-|---|---|---|
-| Blogi, serwisy newsowe | RSS/Atom (autodetekcja z URL strony) | darmowe, łatwe |
-| YouTube (kanały, playlisty) | oficjalny RSS kanału `feeds/videos.xml?channel_id=` | darmowe, łatwe |
-| YouTube – streszczenie | transkrypcja (napisy auto) → AI | darmowe, czasem zawodne |
-| Reddit | RSS subreddita / użytkownika | darmowe |
-| Hacker News | API Algolia / RSS (z filtrem punktów) | darmowe |
-| Podcasty | RSS | darmowe |
-| Substack / newslettery | RSS Substacka lub unikalny adres e-mail do przekierowania | darmowe / średnie |
-| Bluesky, Mastodon | natywny RSS profilu | darmowe |
-| **X / Twitter** | oficjalne API to min. ~200 USD/mies.; alternatywa: self-hostowany RSSHub (niestabilne) | **problematyczne** |
-| LinkedIn, Instagram | brak sensownego API | odpuszczamy w v1 |
+- Sign up / sign in (email + password, optional GitHub), sign-up can be closed
+- Follow by URL with feed discovery (YouTube, Reddit, HN, Bluesky, Mastodon, RSS/Atom autodiscovery)
+- Topic watch, saved links, PWA share target, bookmarklet
+- Categories with colours, creators, per-source editing, unfollow
+- Scheduler: `/api/cron` (Vercel cron / GitHub Action / any cron) or in-process timer (Docker)
+- Summaries with the user's model; reading time for articles, duration for podcasts
+- Inbox with filters (category, type), Saved, Done, undo, keyboard shortcuts
+- Auto-archive after N days, daily email digest
+- Light and dark theme
 
-Rekomendacja dla X: w v1 nie integrujemy automatycznie. Zamiast tego **„dodaj link
-ręcznie”** (share sheet z telefonu / bookmarklet) — wklejasz link do posta/wątku,
-on też staje się zadaniem. Większość twórców z X ma też YT/blog/Substack.
+## Next
 
-## 3. Funkcje
+1. YouTube transcripts for better video summaries (today: the video description is used)
+2. Swipe gestures on mobile (right = done, left = skip)
+3. OPML import/export
+4. Per-category daily limits and creator priority
+5. X via xAI API search (if a Grok subscription is available)
+6. Reader view inside the app, notes on items, export of saved items (Markdown/Notion)
+7. Web push notifications
 
-### MVP (v1)
-1. Dodawanie źródła przez wklejenie URL (strona, kanał YT, subreddit) — autodetekcja feedu.
-2. Kategorie + przypisanie źródeł; grupowanie źródeł w Twórców.
-3. Cykliczny fetch (co 30 min) + deduplikacja (ten sam link z dwóch źródeł = 1 zadanie).
-4. Streszczenie AI: 3–5 punktów, szacowany czas, typ (artykuł / wideo / wątek).
-5. Inbox jako lista zadań: filtrowanie po kategorii / typie / twórcy, odhaczanie,
-   pominięcie, ★ zachowanie; skróty klawiszowe (j/k, x, s, o).
-6. Widok „Dziś”: ile zostało, łączny czas (np. „14 pozycji · ~1 h 20 min”).
-7. Ręczne dodanie linku (share sheet / bookmarklet) — m.in. dla X.
-8. PWA – instalowalna na telefonie, działa jak apka.
-9. Import OPML (jeśli masz już subskrypcje w Feedly/Inoreader).
+## Design prompt (Polish, for Claude / Figma / v0)
 
-### Później (v2+)
-- Keyword watch (temat zamiast źródła).
-- Dzienny/tygodniowy digest na e-mail lub push.
-- Limity per kategoria („max 5 z AI dziennie, reszta do archiwum”) i priorytety twórców.
-- Odtwarzacz YT osadzony w apce + zaznaczenie „obejrzane” po końcu filmu.
-- Notatki do itemu, eksport zachowanych do Notion / Markdown.
-- „Czytnik” – czysty widok artykułu w apce.
-
-## 4. Technologia (rekomendacja)
-
-- **Next.js 15 (App Router) + TypeScript** – frontend i API w jednym projekcie.
-- **Tailwind CSS + Radix UI (primitives)** – własny design, bez gotowego „wyglądu shadcn”.
-- **SQLite + Drizzle ORM** – jeden plik bazy, zero administracji; łatwa migracja do
-  Postgresa (Neon/Supabase), gdyby kiedyś była potrzebna.
-- **Worker** w tym samym repo (Node, `node-cron`) – pobiera feedy, ekstrahuje treść
-  (`@mozilla/readability`), transkrypcje YT, woła AI.
-- **AI**: Claude API (model z rodziny Haiku – tani i szybki; streszczenie to ułamki centa).
-- **Auth**: jedna osoba → prosty login (Auth.js z magic linkiem lub GitHub OAuth).
-- **Hosting**: jeden kontener Docker (web + worker + SQLite na wolumenie) na
-  Railway / Fly.io / małym VPS (Hetzner ~5 EUR/mies.).
-
-Dlaczego tak: jeden język, jedno repo, jeden deploy, bez osobnej kolejki i bazy
-do utrzymania. Dla jednego użytkownika i kilkuset źródeł to aż nadto.
-
-### Model danych (szkic)
-```
-category(id, name, color, sort)
-creator(id, name, avatar_url)
-source(id, type, url, feed_url, title, creator_id?, last_fetched_at, etag, error)
-source_category(source_id, category_id)
-item(id, source_id, url_canonical UNIQUE, title, type, published_at,
-     duration_min, summary_bullets JSON, status, starred, done_at, created_at)
-```
-
-## 5. Prompt do designu (Claude / Figma / v0)
+The current UI implements this direction; the prompt is kept for generating new screens.
 
 > Zaprojektuj responsywną aplikację webową (mobile-first, potem desktop) o nazwie
 > **Feedlist** — prywatny agregator treści, w którym każdy nowy artykuł, film YouTube,
@@ -153,6 +106,3 @@ item(id, source_id, url_canonical UNIQUE, title, type, published_at,
 > z ładnym typograficznym komunikatem, 2) widok kategorii, 3) szczegół itemu,
 > 4) dodawanie źródła (pole URL + podgląd wykrytego feedu + wybór kategorii),
 > 5) lista źródeł i twórców, 6) ustawienia. Pokaż light i dark.
-
-## 6. Otwarte pytania
-Zob. wiadomość w sesji — odpowiedzi doprecyzują v1.

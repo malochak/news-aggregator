@@ -1,0 +1,31 @@
+# Self-hosting: `cp .env.example .env`, fill in BETTER_AUTH_SECRET and CRON_SECRET, then `docker compose up -d`.
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://feedlist:feedlist@db:5432/feedlist
+      INTERNAL_CRON: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: feedlist
+      POSTGRES_PASSWORD: feedlist
+      POSTGRES_DB: feedlist
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U feedlist"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  db:

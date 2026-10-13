@@ -1,0 +1,24 @@
+# Free scheduler for deployments that can't run their own (e.g. Vercel Hobby only
+# allows daily crons). Set repository secrets FEEDLIST_URL and CRON_SECRET to enable.
+name: Fetch feeds
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Call /api/cron
+        env:
+          FEEDLIST_URL: ${{ secrets.FEEDLIST_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$FEEDLIST_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "FEEDLIST_URL or CRON_SECRET not set, skipping."
+            exit 0
+          fi
+          curl -fsS --max-time 120 -H "Authorization: Bearer $CRON_SECRET" "$FEEDLIST_URL/api/cron"
